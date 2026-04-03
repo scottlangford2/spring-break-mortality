@@ -6,29 +6,45 @@ Builds all 11 figures: six original analyses and five counterfactual comparisons
 
 ---
 
-## Setup
+## Quickstart
 
 ```bash
-git clone https://github.com/scottlangford/spring-break-mortality.git
+git clone https://github.com/scottlangford2/spring-break-mortality.git
 cd spring-break-mortality
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+
+# Download all data (FARS from NHTSA, Google Trends, etc.)
+python fetch_data.py
+
+# Build all 11 figures
+python main.py
 ```
 
-## Data
+That's it. `fetch_data.py` handles everything — no manual CSV creation needed.
 
-Place the following CSVs in `data/` (not tracked by git):
+## Data Pipeline
 
-| File | Source | Key columns |
-|------|--------|-------------|
-| `fars_persons.csv` | [NHTSA FARS](https://www.nhtsa.gov/research-data/fatality-analysis-reporting-system-fars) — merge of `accident` + `person` files | `year month day state county age inj_sev day_week st_case` |
-| `news_deaths.csv` | Authors' Google News / Bing News scrape | `year deaths` |
-| `google_trends.csv` | [Google Trends](https://trends.google.com) — query: *"spring break death"* | `year month interest` |
-| `gatherings.csv` | News scraping + event attendance records | `event attendees_m deaths_low deaths_high` |
-| `university_sb_changes.csv` *(optional)* | University spring break schedule records | `state county treat_year ever_treat` |
+`fetch_data.py` downloads and prepares four datasets:
 
-> **FARS download:** [https://www.nhtsa.gov/file-downloads?p=nhtsa/downloads/FARS/](https://www.nhtsa.gov/file-downloads?p=nhtsa/downloads/FARS/)
-> Merge `accident.CSV` and `person.CSV` on `ST_CASE` and `YEAR`, then export to `data/fars_persons.csv`.
+| Step | Source | What it does |
+|------|--------|--------------|
+| 1 | [NHTSA FARS](https://www.nhtsa.gov/research-data/fatality-analysis-reporting-system-fars) | Downloads national CSV zips for 2016–2023, merges `accident` + `person` tables on `ST_CASE` + `YEAR` |
+| 2 | [Google Trends](https://trends.google.com) via `pytrends` | Pulls monthly search interest for *"spring break death"*, 2016–2025 |
+| 3 | Compiled estimates | Creates `gatherings.csv` with deaths-per-million-attendees for six mass gathering types |
+| 4 | Google News scrape | Searches for spring-break fatality headlines by year; falls back to compiled estimates if rate-limited |
+
+An optional fifth file, `university_sb_changes.csv`, is needed for CF2 (natural experiment). See [Notes](#notes) below.
+
+All CSVs land in `data/` and are git-ignored.
+
+### Additional dependencies for data fetch
+
+```bash
+pip install pytrends requests
+```
+
+These are only needed for `fetch_data.py`, not for `main.py`.
 
 ## Usage
 
@@ -73,25 +89,27 @@ Figures are written to `graphics/`.
 
 ```
 spring-break-mortality/
-├── main.py                    # entry point
-├── blog.md                    # the blog post
+├── main.py                      # build figures
+├── fetch_data.py                # download + prepare all data
+├── blog.md                      # the blog post
 ├── requirements.txt
 ├── .gitignore
 ├── README.md
-├── data/                      # CSVs go here (not tracked)
+├── data/                        # CSVs (not tracked)
 │   └── .gitkeep
-├── graphics/                  # output figures (not tracked)
+├── graphics/                    # output figures (not tracked)
 │   └── .gitkeep
 └── src/
     ├── __init__.py
-    ├── style.py                # shared matplotlib style
-    ├── data_prep.py            # all loading + feature engineering
-    ├── figures_original.py     # original 6 figures
+    ├── style.py                 # shared matplotlib style
+    ├── data_prep.py             # all loading + feature engineering
+    ├── figures_original.py      # original 6 figures
     └── figures_counterfactual.py  # 5 counterfactual figures
 ```
 
 ## Notes
 
-- `university_sb_changes.csv` is required for CF2 (natural experiment). If missing, that figure renders a placeholder with instructions.
-- `gatherings.csv` falls back to illustrative values if missing. Replace with your scraped numbers.
-- FARS years used: 2016–2023. News scrape years: 2016–2025.
+- `university_sb_changes.csv` is required for CF2 (natural experiment). If missing, that figure renders a placeholder. Build it from university spring break schedule records with columns: `state`, `county`, `treat_year`, `ever_treat`.
+- `gatherings.csv` ships with illustrative values. Replace with your own scraped numbers for publication.
+- FARS years: 2016–2023. News scrape years: 2016–2025.
+- The FARS download in `fetch_data.py` pulls ~700K person records (~100 MB of zips). First run takes a few minutes.
