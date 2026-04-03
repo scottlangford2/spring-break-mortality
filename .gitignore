@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Data (keep structure, not files)
+data/*.csv
+data/*.dta
+data/*.xlsx
+!data/.gitkeep
+
+# Figures (regenerate from code)
+graphics/*.png
+graphics/*.pdf
+!graphics/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Jupyter
+.ipynb_checkpoints/
